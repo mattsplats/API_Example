@@ -54,25 +54,45 @@ module.exports = {
    * @param {number} currRoll - value of current roll (where 0 <= roll <= 10)
    */
   updateScores: function (p, currFrame, prevFrame1, prevFrame2, currRoll) {    
-      // If both previous frames were strikes AND we are on our first roll this frame, add current roll's score to current and both previous frames
-      if (typeof currFrame.roll1 === 'undefined' && prevFrame1 && prevFrame2 && prevFrame1.roll1 === 'X' && prevFrame2.roll1 === 'X') {
+      function singleUpdate () {  // Last roll was not a strike or spare
+        currFrame.score += currRoll;
+      }
+
+      function doubleUpdate () {  // Last roll was a strike or spare
+        currFrame.score  += currRoll * 2;
+        prevFrame1.score += currRoll;
+      }
+
+      function tripleUpdate () {  // Last two rolls were strikes
         currFrame.score  += currRoll * 3;
         prevFrame1.score += currRoll * 2;
         prevFrame2.score += currRoll;
       }
+      
+      // If we're on the first frame (does prevFrame1 exist?)
+      if (!prevFrame1) singleUpdate();
+      else {
 
-      // If the prev frame was a strike, add current roll's score to current and previous frame
-      else if (prevFrame1 && prevFrame1.roll1 === 'X') {  
-        currFrame.score  += currRoll * 2;
-        prevFrame1.score += currRoll;
-      
-      // If the prev frame was a spare AND we are on our first roll this frame, add current roll's score to current and previous frame
-      } else if (typeof currFrame.roll1 === 'undefined' && prevFrame1 && prevFrame1.roll2 === '/') {  
-        currFrame.score  += currRoll * 2;
-        prevFrame1.score += currRoll;
+        // If we are on our first roll this frame
+        if (typeof currFrame.roll1 === 'undefined') {
+
+          // Previous frame was a strike?
+          if (prevFrame1.roll1 === 'X') {
+            if (prevFrame2 && prevFrame2.roll1 === 'X') tripleUpdate();  // BOTH previous frames were strikes?
+            else doubleUpdate();
+          
+          // Previous frame was a spare?
+          } else if (prevFrame1.roll2 === '/') doubleUpdate();
+          else singleUpdate();
+
+        // If we are on our second roll this frame
+        } else {
+        
+          // Previous frame was a strike?
+          if (prevFrame1.roll1 === 'X') doubleUpdate();
+          else singleUpdate();
+        }
       }
-      
-      else currFrame.score += currRoll;  // Default case: add current roll to current frame score
 
       // Assign current frame score to player score
       p.score = currFrame.score;
