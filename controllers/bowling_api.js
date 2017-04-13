@@ -18,7 +18,7 @@ router.post('/', (req, res) => {
     res.status(400).send('Name parameter required');
   
   } if (db.get(name) !== undefined) {
-    res.status(404).send('Player already exists');
+    res.status(400).send('Player already exists');
 
   } else {
     res.status(201).json(db.create(name));
