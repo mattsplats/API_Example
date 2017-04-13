@@ -2,13 +2,12 @@
 
 module.exports = {
   /**
-   * Gets the current and previous two frames.
-   * If no frame object exists for the current frame, creates the object and pushes it to the frames array.
+   * Gets the current and previous two frames
    * @param p - player object
    * @returns {Object} - contains current and previous two frames
    */
   getRecentFrames: function (p) {
-    const currFrame  = p.frames.length === p.onFrame ? p.frames[p.onFrame - 1] : p.frames[p.frames.push({score: p.score}) - 1],
+    const currFrame  = p.frames[p.onFrame - 1],
           prevFrame1 = p.onFrame > 1 ? p.frames[p.onFrame - 2] : undefined,
           prevFrame2 = p.onFrame > 2 ? p.frames[p.onFrame - 3] : undefined;
 
@@ -16,9 +15,11 @@ module.exports = {
   },
 
   /**
-   * Updates scores and cascades previous scores if needed
+   * Updates player score and scores across frames as needed
+   * @param p - player object
+   * @param currRoll - value of current roll (where 0 <= roll <= 10)
    */
-  updateScores: function (currFrame, prevFrame1, prevFrame2) {
+  updateScores: function (p, currRoll) {
     const {currFrame, prevFrame1, prevFrame2} = this.getRecentFrames(p);
 
       // Update frame scores and player score
@@ -38,25 +39,28 @@ module.exports = {
 
       // Assign current frame score to player score
       p.score = currFrame.score;
-  }
+  },
 
   /**
    * Updates frames and player score
    * @param p - player object
    * @param currRoll - value of current roll (where 0 <= roll <= 10)
+   * @returns p - mutated player object
    */
   updatePlayer: function (p, currRoll) {
-    // Get or create current frame object
-    const currFrame = p.frames.length === p.onFrame ? p.frames[p.onFrame - 1] : p.frames[p.frames.push({score: p.score}) - 1];
+    if (p.gameOver) return p;
     
+    if (p.frames.length === p.onFrame) p.frames.push({score: p.score});  // Create current frame object if missing
+    
+    // If on frame ten, handle in frameTenUpdate
     if (p.onFrame === 10) {
-      this.frameTenUpdate(p, currRoll)
+      return this.frameTenUpdate(p, currRoll);
 
     } else {
-      
+      this.updateScores(p, currRoll);
 
+      const currFrame = p.frames[p.onFrame - 1];
 
-      // Update frames with new roll information
       // If we're on the first roll for the current frame
       if (typeof currFrame.ball1 === 'undefined') {
         
@@ -69,16 +73,102 @@ module.exports = {
         
       // If we're on the second roll for the current frame
       } else {
-        
         p.onFrame++;  // Advance to the next frame
 
         if (currFrame.ball1 + currRoll === 10) currFrame.roll2 = '/';  // If the current roll is a spare
         else currFrame.roll2 = currRoll;
       }
     }
+
+    return p;
   },
 
-  validateRoll: function () {
+  /**
+   * Special player update logic for dealing with the tenth frame
+   * @param p - player object
+   * @param currRoll - value of current roll (where 0 <= roll <= 10)
+   * @returns p - mutated player object
+   */
+  frameTenUpdate: function (p, currRoll) {
+    const {currFrame, prevFrame1, prevFrame2} = this.getRecentFrames(p);
 
+    // On third roll
+    if (typeof currFrame.roll2 !== 'undefined') {             
+
+      // Strike, spare, or number?
+      if (currFrame.roll2 === 'X' || currFrame.roll2 === '/') {
+        if (currRoll === 10) currFrame.roll3 = 'X';
+        else currFrame.roll3 = currRoll;
+      
+      } else {
+        if (currFrame.roll2 + currRoll === 10) currFrame.roll3 = '/';
+        else currFrame.roll3 = currRoll;
+      }
+
+      // Nonstandard score update: roll3 cannot cascade, so just update the frame and total scores
+      currFrame.score += currRoll;
+      p.score         += currRoll;
+
+      // The game MUST be over
+      p.gameOver = true;
+    
+
+    // On second roll
+    } else if (typeof currFrame.roll1 !== 'undefined') {
+
+      // Strike, spare, or number?
+      if (currFrame.roll1 === 'X' && currRoll === 10) currFrame.roll2 = 'X';
+      else if (currFrame.roll1 + currRoll === 10)     currFrame.roll2 = '/';
+      else                                            currFrame.roll2 = currRoll;
+
+      // Nonstandard score update: only update frame 9 if both frame 10: roll1 AND frame 9 were strikes
+      if (currFrame.roll1 === 'X' && prevFrame1.ball1 === 'X') {
+        currFrame.score  += currRoll * 2;
+        prevFrame1.score += currRoll;
+
+      } else currFrame.score += currRoll;
+      p.score = currFrame.score;
+
+      // Unless there's a strike or spare to be resolved, the game is over
+      p.gameOver = currFrame.roll1 === 'X' || currFrame.roll2 === '/' ? false : true;  
+
+
+    // On first roll
+    } else {
+      currFrame.roll1 = currRoll === 10 ? 'X' : currRoll;
+      this.updateScores(p, currRoll);  // Normal update works for the first roll
+    }
+      
+    return p;
+  },
+
+  /**
+   * Validates roll value input
+   * @param p - player object
+   * @param currRoll - value of current roll (where 0 <= roll <= 10)
+   * @returns {boolean} - true if valid, otherwise false
+   */
+  validateRoll: function (p, currRoll) {
+    if (currRoll < 0 && currRoll > 10) return false;
+    
+    const {currFrame, prevFrame1, prevFrame2} = this.getRecentFrames(p);
+    
+    // The remaining tests are for attempts to roll a combined value > 10 on a single rack of pins.
+    // Frames 1 - 9
+    if (p.onFrame < 10) {
+      if (typeof currFrame.roll1 !== 'undefined' && currFrame.roll1 + currRoll > 10) return false;
+
+    // Frame 10
+    } else {
+    
+      // If we're on the third roll, and the previous roll was not a strike or spare
+      if (typeof currFrame.roll2 === 'number') {
+       if (currFrame.roll2 + currRoll > 10) return false;
+
+      // If we're on the second roll, and the previous roll was not a strike
+      } else if (typeof currFrame.roll1 === 'number' && currFrame.roll1 + currRoll > 10) return false;
+    }
+
+    return true;
   }
 }
