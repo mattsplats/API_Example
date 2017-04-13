@@ -8,7 +8,7 @@ module.exports = (function () {
     /**
      * Creates new player and adds to db
      * @param {string} name - player name string
-     * @returns {Object} - new player object
+     * @returns {Object} - player object with ID added
      */
     create: function (name) {
       const newPlayer = {
@@ -19,7 +19,7 @@ module.exports = (function () {
         onFrame: 1,
         gameOver: false
       }
-      
+
       data.set(name, newPlayer);
       return newPlayer;
     },

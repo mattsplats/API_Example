@@ -51,13 +51,14 @@ router.get('/:name', (req, res) => {
 });
 
 /**
- * Update player by name
+ * Modify player by adding new roll to existing score
+ * POST is used here instead of PUT as the operation is not idempotent!
  * 
  * Outputs player object as JSON
  */
-router.put('/:name', (req, res) => {
-  const name = req.params.name,
-        roll = req.body.roll;
+router.post('/:name', (req, res) => {
+  const name  = req.params.name,
+        roll  = req.body.roll;
 
   if (typeof name === 'undefined' || name === '') {
     res.status(400).send('Name parameter required');
@@ -69,13 +70,44 @@ router.put('/:name', (req, res) => {
     const player = db.get(name);
 
     if (typeof player === 'undefined') {
-      res.status(400).send(`No player with the name: ${name}`);
+      res.status(404).send(`No player with the name: ${name}`);
+
+    } else if (player.gameOver) {
+      res.status(400).send(`Player's game is over - PUT /api/:name to reset game`);
 
     } else if (!bowl.validateRoll(player, roll)) {
       res.status(400).send('Invalid roll: open frame must not exceed 10 total');
     
     } else {
       bowl.updatePlayer(player, roll);
+      db.update(name, player);  // Technically not necessary as the object has already been mutated...
+      res.json(player);
+    }
+  }
+});
+
+/**
+ * Modify player by resetting game
+ * 
+ * Outputs player object as JSON
+ */
+router.put('/:name', (req, res) => {
+  const name = req.params.name;
+
+  if (typeof name === 'undefined' || name === '') {
+    res.status(400).send('Name parameter required');
+
+  } else {
+    const player = db.get(name);
+
+    if (typeof player === 'undefined') {
+      res.status(404).send(`No player with the name: ${name}`);
+
+    } else {
+      player.score = 0;
+      player.frames = [];
+      player.onFrame = 1;
+      player.gameOver = false;
       db.update(name, player);  // Technically not necessary as the object has already been mutated...
       res.json(player);
     }
@@ -91,7 +123,7 @@ router.delete('/:name', (req, res) => {
   const name = req.params.name;
   
   if (name === undefined || name === '') {
-    res.status(400).send('Name parameter required');
+    res.status(404).send('Name parameter required');
 
   } else {
     db.delete(name);

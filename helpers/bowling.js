@@ -2,33 +2,6 @@
 
 module.exports = {
   /**
-   * Updates player score and scores across frames as needed
-   * @param {Object} p - player object
-   * @param {Object} currFrame - current frame object
-   * @param {Object} prevFrame1 - prev frame object
-   * @param {Object} prevFrame2 - prev prev frame object
-   * @param {number} currRoll - value of current roll (where 0 <= roll <= 10)
-   */
-  updateScores: function (p, currFrame, prevFrame1, prevFrame2, currRoll) {    
-      // If both previous frames were strikes, add current roll's score to current and both previous frames
-      if (prevFrame1 && prevFrame2 && prevFrame1.roll1 === 'X' && prevFrame2.roll1 === 'X') {
-        currFrame.score  += currRoll * 3;
-        prevFrame1.score += currRoll * 2;
-        prevFrame2.score += currRoll;
-      }
-
-      // If the prev frame was a strike or spare AND we are on our first roll this frame, add current roll's score to current and previous frame
-      else if (prevFrame1 && (prevFrame1.roll1 === 'X' || prevFrame1.roll2 === '/') && typeof currFrame.roll1 === 'undefined') {  
-        currFrame.score  += currRoll * 2;
-        prevFrame1.score += currRoll;
-      
-      } else currFrame.score += currRoll;  // Default case: add current roll to current frame score
-
-      // Assign current frame score to player score
-      p.score = currFrame.score;
-  },
-
-  /**
    * Updates frames and player score
    * @param {Object} p - player object
    * @param {number} currRoll - value of current roll (where 0 <= roll <= 10)
@@ -71,6 +44,39 @@ module.exports = {
 
     return p;
   },
+  
+  /**
+   * Updates player score and scores across frames as needed
+   * @param {Object} p - player object
+   * @param {Object} currFrame - current frame object
+   * @param {Object} prevFrame1 - prev frame object
+   * @param {Object} prevFrame2 - prev prev frame object
+   * @param {number} currRoll - value of current roll (where 0 <= roll <= 10)
+   */
+  updateScores: function (p, currFrame, prevFrame1, prevFrame2, currRoll) {    
+      // If both previous frames were strikes AND we are on our first roll this frame, add current roll's score to current and both previous frames
+      if (typeof currFrame.roll1 === 'undefined' && prevFrame1 && prevFrame2 && prevFrame1.roll1 === 'X' && prevFrame2.roll1 === 'X') {
+        currFrame.score  += currRoll * 3;
+        prevFrame1.score += currRoll * 2;
+        prevFrame2.score += currRoll;
+      }
+
+      // If the prev frame was a strike, add current roll's score to current and previous frame
+      else if (prevFrame1 && prevFrame1.roll1 === 'X') {  
+        currFrame.score  += currRoll * 2;
+        prevFrame1.score += currRoll;
+      
+      // If the prev frame was a spare AND we are on our first roll this frame, add current roll's score to current and previous frame
+      } else if (typeof currFrame.roll1 === 'undefined' && prevFrame1 && prevFrame1.roll2 === '/') {  
+        currFrame.score  += currRoll * 2;
+        prevFrame1.score += currRoll;
+      }
+      
+      else currFrame.score += currRoll;  // Default case: add current roll to current frame score
+
+      // Assign current frame score to player score
+      p.score = currFrame.score;
+  },
 
   /**
    * Special player update logic for dealing with the tenth frame
@@ -84,7 +90,11 @@ module.exports = {
   frameTenUpdate: function (p, currFrame, prevFrame1, prevFrame2, currRoll) {
 
     // On third roll
-    if (typeof currFrame.roll2 !== 'undefined') {             
+    if (typeof currFrame.roll2 !== 'undefined') {
+
+      // Nonstandard score update: roll3 cannot cascade, so just update the frame and total scores
+      currFrame.score += currRoll;
+      p.score         += currRoll;           
 
       // Strike, spare, or number?
       if (currFrame.roll2 === 'X' || currFrame.roll2 === '/') {
@@ -96,10 +106,6 @@ module.exports = {
         else currFrame.roll3 = currRoll;
       }
 
-      // Nonstandard score update: roll3 cannot cascade, so just update the frame and total scores
-      currFrame.score += currRoll;
-      p.score         += currRoll;
-
       // The game MUST be over!
       p.gameOver = true;
     
@@ -107,18 +113,18 @@ module.exports = {
     // On second roll
     } else if (typeof currFrame.roll1 !== 'undefined') {
 
-      // Strike, spare, or number?
-      if (currFrame.roll1 === 'X' && currRoll === 10) currFrame.roll2 = 'X';
-      else if (currFrame.roll1 + currRoll === 10)     currFrame.roll2 = '/';
-      else                                            currFrame.roll2 = currRoll;
-
-      // Nonstandard score update: only update frame 9 if both frame 10: roll1 AND frame 9 were strikes
-      if (currFrame.roll1 === 'X' && prevFrame1.roll1 === 'X') {
+      // Nonstandard score update: only update frame 9 if it was a strike
+      if (prevFrame1.roll1 === 'X') {
         currFrame.score  += currRoll * 2;
         prevFrame1.score += currRoll;
 
       } else currFrame.score += currRoll;
       p.score = currFrame.score;
+
+      // Strike, spare, or number?
+      if (currFrame.roll1 === 'X' && currRoll === 10) currFrame.roll2 = 'X';
+      else if (currFrame.roll1 + currRoll === 10)     currFrame.roll2 = '/';
+      else                                            currFrame.roll2 = currRoll;
 
       // Unless there's a strike or spare to be resolved, the game is over
       p.gameOver = currFrame.roll1 === 'X' || currFrame.roll2 === '/' ? false : true;  
