@@ -5,7 +5,6 @@ const express = require('express'),
       db      = require('../db/mock_db.js'),
       bowl    = require('../helpers/bowling.js');
 
-
 /**
  * Attempt to find player first, then create if not found
  * Required inputs: playerName
@@ -25,7 +24,6 @@ router.post('/', (req, res) => {
     res.status(201).json(db.create(name));
   }
 });
-
 
 /**
  * Retrieve all players in the system
@@ -52,7 +50,6 @@ router.get('/:name', (req, res) => {
   }
 });
 
-
 /**
  * Update player by name
  * 
@@ -71,15 +68,18 @@ router.put('/:name', (req, res) => {
 
   const player = db.get(name);
 
-  if (!bowl.validateRoll(player, roll)) {
+  if (typeof player === 'undefined') {
+    res.status(400).send(`No player with the name: ${name}`);
+
+  } else if (!bowl.validateRoll(player, roll)) {
     res.status(400).send('Invalid roll: open frame must not exceed 10 total');
+  
+  } else {
+    bowl.updatePlayer(player, roll);
+    db.update(name, player);  // Technically not necessary as the object has already been mutated, but it's a mock db right?
+    res.json(player);
   }
-
-  bowl.updatePlayer(player, roll);
-  db.update(name, player);
-  res.json(player);
 });
-
 
 /**
  * Delete player by name
