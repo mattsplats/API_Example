@@ -43,10 +43,17 @@ router.get('/:name', (req, res) => {
   const name = req.params.name;
 
   if (name === undefined || name === '') {
-    res.status(400).send('Name parameter required');
+    res.status(404).send('Name parameter required');
   
   } else {
-    res.json(db.get(name));
+    const player = db.get(name);
+
+    if (typeof player === 'undefined') {
+      res.status(404).send(`No player with the name: ${name}`);
+    
+    } else {
+      res.json(player);
+    }
   }
 });
 
@@ -123,11 +130,18 @@ router.delete('/:name', (req, res) => {
   const name = req.params.name;
   
   if (name === undefined || name === '') {
-    res.status(404).send('Name parameter required');
+    res.status(400).send('Name parameter required');
 
   } else {
-    db.delete(name);
-    res.sendStatus(204);
+    const player = db.get(name);
+
+    if (typeof player === 'undefined') {
+      res.status(404).send(`No player with the name: ${name}`);
+    
+    } else {
+      db.delete(name);
+      res.sendStatus(204);
+    }
   }
 });
 

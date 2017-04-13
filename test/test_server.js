@@ -81,10 +81,7 @@ describe('Bowling API: Basic routes', () => {
 
         return chai.request(server)
           .get('/api/Jane%20Doe')
-          .then(res => {
-            res.should.have.status(200);
-            res.body.should.be.a('string');
-          });
+          .catch(err => err.response.statusCode.should.eql(404));
       });
   });
 });
@@ -114,10 +111,7 @@ describe('Bowling API: Scoring', () => {
 
         return chai.request(server)
           .get('/api/Jane%20Doe')
-          .then(res => {
-            res.should.have.status(200);
-            res.body.should.be.a('string');
-          });
+          .catch(err => err.response.statusCode.should.eql(404));
       });
   });
 
