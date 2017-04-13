@@ -27,8 +27,8 @@ const routes = {
 app.use('/api', routes.api);
 
 // Init server
-app.listen(PORT, function () {
-	console.log(`App listening on port ${PORT}\n`);
+app.listen(PORT, () => {
+	if (process.env.NODE_ENV !== 'test') console.log(`App listening on port ${PORT}`);
 });
 
 // For testing
