@@ -64,20 +64,21 @@ router.put('/:name', (req, res) => {
 
   } else if (typeof roll !== 'number' || roll < 0 || roll > 10) {
     res.status(400).send('Roll must be a number between 0 and 10');
-  }
-
-  const player = db.get(name);
-
-  if (typeof player === 'undefined') {
-    res.status(400).send(`No player with the name: ${name}`);
-
-  } else if (!bowl.validateRoll(player, roll)) {
-    res.status(400).send('Invalid roll: open frame must not exceed 10 total');
   
   } else {
-    bowl.updatePlayer(player, roll);
-    db.update(name, player);  // Technically not necessary as the object has already been mutated, but it's a mock db right?
-    res.json(player);
+    const player = db.get(name);
+
+    if (typeof player === 'undefined') {
+      res.status(400).send(`No player with the name: ${name}`);
+
+    } else if (!bowl.validateRoll(player, roll)) {
+      res.status(400).send('Invalid roll: open frame must not exceed 10 total');
+    
+    } else {
+      bowl.updatePlayer(player, roll);
+      db.update(name, player);  // Technically not necessary as the object has already been mutated...
+      res.json(player);
+    }
   }
 });
 
