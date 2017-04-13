@@ -4,14 +4,19 @@
   "description": "A bowling player and score management API for The Zebra.",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha test/test_server.js"
   },
-  "author": "",
+  "author": "Matt Davis",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.16.1",
     "express": "^4.14.1",
     "method-override": "^2.3.7",
     "morgan": "^1.8.1"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-http": "^3.0.0",
+    "mocha": "^3.2.0"
   }
 }

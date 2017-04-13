@@ -14,7 +14,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.text());
 
 // Run Morgan for logging
-app.use(logger('dev'));
+if (process.env.NODE_ENV !== 'test') app.use(logger('dev'));
 
 // Static content route
 app.use(express.static(process.cwd() + '/public'));
@@ -28,5 +28,8 @@ app.use('/api', routes.api);
 
 // Init server
 app.listen(PORT, function () {
-	console.log(`App listening on port ${PORT}`);
+	console.log(`App listening on port ${PORT}\n`);
 });
+
+// For testing
+module.exports = app;
