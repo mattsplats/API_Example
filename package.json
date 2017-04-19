@@ -1,7 +1,7 @@
 {
   "name": "bowling_api",
   "version": "0.0.1",
-  "description": "A bowling player and score management API for The Zebra.",
+  "description": "A bowling player and score management API.",
   "main": "server.js",
   "scripts": {
     "test": "mocha test/test_server.js"
