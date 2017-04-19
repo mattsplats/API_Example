@@ -8,29 +8,31 @@ module.exports = (function () {
     /**
      * Creates new player and adds to db
      * @param {string} name - player name string
-     * @returns {Object} - player object with ID added
+     * @returns {Promise} - when resolved, data = player object
      */
     create: function (name) {
-      const newPlayer = {
-        id: currID++,  // Uses currID value, then increments
-        name: name,
-        score: 0,
-        frames: [],
-        onFrame: 1,
-        gameOver: false
-      }
+      return new Promise((resolve, reject) => {
+        const newPlayer = {
+          id: currID++,  // Uses currID value, then increments
+          name: name,
+          score: 0,
+          frames: [],
+          onFrame: 1,
+          gameOver: false
+        }
 
-      data.set(name, newPlayer);
-      return newPlayer;
+        data.set(name, newPlayer);
+        return resolve(newPlayer);
+      });
     },
 
     /**
      * Retrieves player by name
      * @param {string} name - player name string
-     * @returns {Object} - player object
+     * @returns {Promise} - when resolved, data = player object
      */
     get: function (name) {
-      return data.get(name);
+      return new Promise((resolve, reject) => resolve(data.get(name)));
     },
 
     /**
@@ -38,28 +40,36 @@ module.exports = (function () {
      * @returns {Array} - all player objects
      */
     getAll: function () {
-      return [...data.values()];  // Values returns an iterator, spread operator converts to array
+      return new Promise((resolve, reject) => resolve([...data.values()]));  // Values returns an iterator, spread operator converts to array
     },
 
     /**
      * Updates player by name
      * @param {string} name - player name string
      * @param {Object} player - score of the current roll
-     * @returns {Object} - player object
+     * @returns {Promise} - when resolved, data = player object
      */
     update: function(name, player) {
-      if (data.has(name)) {
-        data.set(name, player);
-        return data.get(name);
-      }
+      return new Promise((resolve, reject) => {
+        if (data.has(name)) {
+          data.set(name, player);
+          return resolve(player);
+        }
+
+        return reject(new Error('Update on non-existing entity'));
+      });
     },
     
     /**
      * Deletes player by name
      * @param {string} name - player name string
+     * @returns {Promise} - contains no data
      */
     delete: function (name) {
-      data.delete(name);
+      return new Promise((resolve, reject) => {
+        data.delete(name);
+        return resolve();
+      })
     }
   };
 })();

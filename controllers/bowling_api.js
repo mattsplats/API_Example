@@ -17,11 +17,19 @@ router.post('/', (req, res) => {
   if (name === undefined || name === '') {
     res.status(400).send('Name parameter required');
   
-  } if (db.get(name) !== undefined) {
-    res.status(400).send('Player already exists');
-
   } else {
-    res.status(201).json(db.create(name));
+    db.get(name)
+      .then(player => {
+        if (player !== undefined) {
+          res.status(400).send('Player already exists');
+
+        } else {
+          db.create(name)
+            .then(newPlayer => res.status(201).json(newPlayer))
+            .catch(err      => res.status(500).send(err.message));
+        }
+      })
+      .catch(err => res.status(500).send(err.message));
   }
 });
 
@@ -31,7 +39,9 @@ router.post('/', (req, res) => {
  * Outputs array of player objects as JSON
  */
 router.get('/', (req, res) => {
-  res.json(db.getAll());
+  db.getAll()
+    .then(players => res.json(players))
+    .catch(err    => res.status(500).send(err.message));
 });
 
 /**
@@ -46,14 +56,16 @@ router.get('/:name', (req, res) => {
     res.status(400).send('Name parameter required');
   
   } else {
-    const player = db.get(name);
-
-    if (typeof player === 'undefined') {
-      res.status(404).send(`No player with the name: ${name}`);
-    
-    } else {
-      res.json(player);
-    }
+    db.get(name)
+      .then(player => {
+        if (typeof player === 'undefined') {
+          res.status(404).send(`No player with the name: ${name}`);
+        
+        } else {
+          res.json(player);
+        }
+      })
+      .catch(err => res.status(500).send(err.message));
   }
 });
 
@@ -74,22 +86,25 @@ router.post('/:name', (req, res) => {
     res.status(400).send('Roll must be a number between 0 and 10');
   
   } else {
-    const player = db.get(name);
+    db.get(name)  
+      .then(player => {
+        if (typeof player === 'undefined') {
+          res.status(404).send(`No player with the name: ${name}`);
 
-    if (typeof player === 'undefined') {
-      res.status(404).send(`No player with the name: ${name}`);
+        } else if (player.gameOver) {
+          res.status(400).send(`Player's game is over - PUT /api/:name to reset game`);
 
-    } else if (player.gameOver) {
-      res.status(400).send(`Player's game is over - PUT /api/:name to reset game`);
-
-    } else if (!bowl.validateRoll(player, roll)) {
-      res.status(400).send('Invalid roll: open frame must not exceed 10 total');
-    
-    } else {
-      bowl.updatePlayer(player, roll);
-      db.update(name, player);  // Technically not necessary as the object has already been mutated...
-      res.json(player);
-    }
+        } else if (!bowl.validateRoll(player, roll)) {
+          res.status(400).send('Invalid roll: open frame must not exceed 10 total');
+        
+        } else {
+          bowl.updatePlayer(player, roll);
+          db.update(name, player)  // Technically not necessary as the object has already been mutated...
+            .then(update => res.json(update))
+            .catch(err   => res.status(500).send(err.message));
+        }
+      })
+      .catch(err => res.status(500).send(err.message));
   }
 });
 
@@ -105,19 +120,23 @@ router.put('/:name', (req, res) => {
     res.status(400).send('Name parameter required');
 
   } else {
-    const player = db.get(name);
+    db.get(name)  
+      .then(player => {
+        if (typeof player === 'undefined') {
+          res.status(404).send(`No player with the name: ${name}`);
 
-    if (typeof player === 'undefined') {
-      res.status(404).send(`No player with the name: ${name}`);
-
-    } else {
-      player.score = 0;
-      player.frames = [];
-      player.onFrame = 1;
-      player.gameOver = false;
-      db.update(name, player);  // Technically not necessary as the object has already been mutated...
-      res.json(player);
-    }
+        } else {
+          player.score = 0;
+          player.frames = [];
+          player.onFrame = 1;
+          player.gameOver = false;
+          
+          db.update(name, player)  // Technically not necessary as the object has already been mutated...
+            .then(player => res.json(player))
+            .catch(err   => res.status(500).send(err.message));
+        }
+      })
+      .catch(err => res.status(500).send(err.message));
   }
 });
 
@@ -139,8 +158,10 @@ router.delete('/:name', (req, res) => {
       res.status(404).send(`No player with the name: ${name}`);
     
     } else {
-      db.delete(name);
-      res.sendStatus(204);
+      db.delete(name)
+        .then(()   => res.sendStatus(204))
+        .catch(err => res.status(500).send(err.message));
+      ;
     }
   }
 });
